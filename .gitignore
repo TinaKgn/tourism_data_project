@@ -214,3 +214,6 @@ data/raw/*
 
 # Processed data files
 data/processed/
+# Large data files
+notebooks/*.csv
+data/*.csv
