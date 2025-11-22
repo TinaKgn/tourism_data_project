@@ -212,6 +212,8 @@ data/raw/*
 # But keep the folder structure
 !data/raw/.gitkeep
 
+# Processed data files
+data/processed/
 # Large data files
 notebooks/*.csv
 data/*.csv
