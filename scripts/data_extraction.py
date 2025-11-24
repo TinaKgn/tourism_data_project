@@ -319,6 +319,7 @@ def extract_city_dataset(
 def check_dataset_date_range(review_file, business_df=None, city=None, state=None):
     """
     Check the overall date range and total number of reviews in the Yelp review dataset.
+    To print out of the total number of reviews - uncomment the line.
     Optionally filter by a specific city (and state).
 
     Parameters:
