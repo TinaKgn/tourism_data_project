@@ -220,3 +220,17 @@ data/*.csv
 
 # macOS
 .DS_Store
+
+# Ignore personal exploratory notebooks
+notebooks/users/*/exploratory/
+
+
+# Ignore all files in bronze, silver, gold subfolders (keep the folder structure)
+data/bronze/*
+!data/bronze/.gitkeep
+
+data/silver/*
+!data/silver/.gitkeep
+
+data/gold/*
+!data/gold/.gitkeep
