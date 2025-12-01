@@ -234,3 +234,6 @@ data/silver/*
 
 data/gold/*
 !data/gold/.gitkeep
+
+# Ignore Kaggle environment variables
+kaggle.json
