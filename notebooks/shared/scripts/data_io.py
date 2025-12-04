@@ -152,8 +152,100 @@ def check_existing_chunks(directory, pattern="*.parquet", show_info=True):
 
     if show_info:
         total_size = sum(f.stat().st_size for f in chunks) / (1024 * 1024)
-        print(f"[SKIP] Chunks already exist: {directory}")
+        print(f"\n[SKIP] Chunks already exist: {directory}")
         print(f"Found {len(chunks)} chunks, {total_size:.1f} MB total")
         print()
 
     return True, len(chunks)
+
+def convert_json_dataset_to_chunks(json_file, output_dir, file_prefix, chunk_size=10000):
+    """
+    Convert JSON dataset to parquet chunks with adaptive progress indicators
+
+    Args:
+        json_file: Path to input JSON file
+        output_dir: Path to output directory
+        file_prefix: Prefix for chunk files (e.g., 'yelp_business')
+        chunk_size: Records per chunk
+
+    Returns:
+        tuple: (success: bool, chunk_count: int, total_records: int)
+    """
+    import json
+    import pandas as pd
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    # Check if conversion already completed
+    exists, count = check_existing_chunks(output_dir, pattern=f"{file_prefix}_chunk_*.parquet")
+
+    if exists:
+        # Estimate total records from existing chunks
+        sample_chunk = next(output_dir.glob(f"{file_prefix}_chunk_*.parquet"))
+        sample_df = pd.read_parquet(sample_chunk)
+        estimated_total = count * len(sample_df)
+        return True, count, estimated_total
+
+    print(f"Converting {json_file.name} to parquet chunks...")
+    print(f"\nChunk size: {chunk_size:,} records")
+
+    # Determine progress interval based on file size
+    file_size_mb = json_file.stat().st_size / (1024 * 1024)
+    if file_size_mb < 500:
+        progress_interval = 10  # Small files: update every 10 chunks
+    else:
+        progress_interval = 50  # Large files: update every 50 chunks
+
+    records = []
+    chunk_count = 0
+    total_records = 0
+
+    with open(json_file, 'r') as f:
+        for line_num, line in enumerate(f):
+            try:
+                record = json.loads(line.strip())
+                records.append(record)
+                total_records += 1
+
+                # Write chunk when full
+                if len(records) >= chunk_size:
+                    df = pd.DataFrame(records)
+                    chunk_filename = f"{file_prefix}_chunk_{chunk_count:05d}.parquet"
+                    output_path = output_dir / chunk_filename
+
+                    pq.write_table(
+                        pa.Table.from_pandas(df),
+                        output_path,
+                        compression="snappy"
+                    )
+
+                    records = []
+                    chunk_count += 1
+
+                    # Adaptive progress indicator
+                    if chunk_count % progress_interval == 0:
+                        print(f"  Processed {chunk_count} chunks ({total_records:,} records)...")
+
+            except json.JSONDecodeError as e:
+                print(f"Warning: Skipping malformed JSON at line {line_num + 1}: {e}")
+                continue
+
+    # Write remaining records
+    if records:
+        df = pd.DataFrame(records)
+        chunk_filename = f"{file_prefix}_chunk_{chunk_count:05d}.parquet"
+        output_path = output_dir / chunk_filename
+
+        pq.write_table(
+            pa.Table.from_pandas(df),
+            output_path,
+            compression="snappy"
+        )
+        chunk_count += 1
+
+    print(f"\nConversion complete:")
+    print(f"  Total chunks: {chunk_count}")
+    print(f"  Total records: {total_records:,}")
+    print(f"  Output: {output_dir}")
+
+    return True, chunk_count, total_records
