@@ -235,5 +235,9 @@ data/silver/*
 data/gold/*
 !data/gold/.gitkeep
 
+# Ignore models and raw folders completely
+data/models/
+data/raw/
+
 # Ignore Kaggle environment variables
 kaggle.json
